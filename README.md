@@ -109,12 +109,11 @@ sudo gpasswd -a "$USER" i2c
 
 ### Flatpaks
 
-Gotta have Flatpak for that extra software availability.
-
+**Bottles, Meld, Gear Lever, Warehouse**
 ```bash
 sudo apt install flatpak gnome-software-plugin-flatpak -y
 flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-flatpak install flathub com.usebottles.bottles org.gnome.meld it.mijorus.gearlever io.github.flattool.Warehouse com.bitwarden.desktop org.pgadmin.pgadmin4 -y
+flatpak install flathub com.usebottles.bottles org.gnome.meld it.mijorus.gearlever io.github.flattool.Warehouse -y
 ```
 
 ### Development Tools and `mise`
@@ -149,15 +148,17 @@ These are installed from various sources.
 sudo apt install fonts-* --no-install-recommends --no-install-suggests -y
 ```
 
+**pgAdmin 4 Desktop**
+```bash
+curl -fsS https://www.pgadmin.org/static/packages_pgadmin_org.pub | sudo gpg --dearmor -o /usr/share/keyrings/packages-pgadmin-org.gpg
+sudo sh -c 'echo "deb [signed-by=/usr/share/keyrings/packages-pgadmin-org.gpg] https://ftp.postgresql.org/pub/pgadmin/pgadmin4/apt/$(lsb_release -cs) pgadmin4 main" > /etc/apt/sources.list.d/pgadmin4.list && apt update'
+sudo apt install pgadmin4-desktop
+```
+
 **Waydroid**
 ```bash
 curl -s https://repo.waydro.id | sudo bash
 sudo apt install waydroid -y
-```
-
-**ONLYOFFICE**
-```bash
-wget -O ~/Downloads/onlyoffice.deb https://github.com/ONLYOFFICE/DesktopEditors/releases/latest/download/onlyoffice-desktopeditors_amd64.deb && sudo apt install ~/Downloads/onlyoffice.deb -y
 ```
 
 **LocalSend**
@@ -205,7 +206,7 @@ sudo setcap cap_sys_admin+p $(readlink -f $(which sunshine))
 wget -O ~/Downloads/vscode.deb "https://code.visualstudio.com/sha/download?build=stable&os=linux-deb-x64" && sudo apt install ~/Downloads/vscode.deb -y
 ```
 
-**Lutris**
+**Lutris (Bookworm Repo)**
 ```bash
 echo 'deb http://download.opensuse.org/repositories/home:/strycore/Debian_12/ /' | sudo tee /etc/apt/sources.list.d/home:strycore.list
 curl -fsSL https://download.opensuse.org/repositories/home:strycore/Debian_12/Release.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/home_strycore.gpg > /dev/null
@@ -230,7 +231,7 @@ force-window=yes
 EOF
 ```
 
-**qView**
+**qView (Bookworm Repo)**
 ```bash
 echo 'deb http://download.opensuse.org/repositories/home:/tangerine:/deb12-xfce4.18/Debian_12/ /' | sudo tee /etc/apt/sources.list.d/home:tangerine:deb12-xfce4.18.list
 curl -fsSL https://download.opensuse.org/repositories/home:tangerine:deb12-xfce4.18/Debian_12/Release.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/home_tangerine_deb12-xfce4.18.gpg > /dev/null
@@ -238,7 +239,7 @@ sudo apt update
 sudo apt install qview -y
 ```
 
-**Cloudflare WARP**
+**Cloudflare WARP (Bookworm Repo)**
 ```bash
 curl -fsSL https://pkg.cloudflareclient.com/pubkey.gpg | sudo gpg --yes --dearmor --output /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg
 echo "deb [signed-by=/usr/share/keyrings/cloudflare-warp-archive-keyring.gpg] https://pkg.cloudflareclient.com/ bookworm main" | sudo tee /etc/apt/sources.list.d/cloudflare-client.list
@@ -255,7 +256,7 @@ cd ~/Downloads
 wget -qO- "https://gitlab.com/-/snippets/3615945/raw/main/patch-notion-enhanced.linux.sh" | sudo bash
 ```
 
-**OpenVPN3**
+**OpenVPN3 (Bookworm Repo)**
 ```bash
 sudo install -d -m 0755 /etc/apt/keyrings
 curl -fsSL https://packages.openvpn.net/packages-repo.gpg \
@@ -345,3 +346,5 @@ echo "/usr/lib/python3/dist-packages" | sudo tee /usr/lib/python3.13/site-packag
 Then, rerun the update command above.
 
 Reboot one last time, and you should be good to go.
+
+(*Extra*)[https://docs.google.com/document/d/14fZTNXHTvwtGg4zEr4JCuajR_uytKWGnToI8DPPUmBQ/edit?usp=sharing]
