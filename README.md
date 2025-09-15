@@ -116,7 +116,7 @@ flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.f
 flatpak install flathub com.usebottles.bottles org.gnome.meld it.mijorus.gearlever io.github.flattool.Warehouse -y
 ```
 
-### Development Tools and `mise`
+### Development Tools, `mise`, and Homebrew
 
 Setting up the environment for development work.
 
@@ -134,6 +134,8 @@ mise use --global rust@latest
 mise use --global go@latest
 mise use --global java@latest
 mise use --global node@latest
+
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 ```
 
 ### Additional Software (`.deb` Packages and Others)
