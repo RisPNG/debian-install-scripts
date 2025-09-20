@@ -294,6 +294,7 @@ These are best installed manually from their websites.
 *   [Moonlight](https://github.com/moonlight-stream/moonlight-qt/releases/latest)
 *   [Beeper](https://www.beeper.com/download)
 *   [Harmonoid](https://harmonoid.com/downloads#)
+*   [Actions for Nautilus](https://github.com/bassmanitram/actions-for-nautilus)
 
 ## System Configuration
 
@@ -312,6 +313,12 @@ cd ..
 git clone https://github.com/vinceliuice/Fluent-gtk-theme
 cd Fluent-gtk-theme
 chmod +x install.sh && ./install.sh && ./install.sh --tweaks round
+```
+
+### Disable UAC
+
+```bash
+echo "$(whoami) ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/99-$(whoami)-nopasswd > /dev/null && sudo visudo -c
 ```
 
 ### Load Default Settings
