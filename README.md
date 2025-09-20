@@ -102,7 +102,7 @@ sudo reboot -h 0
 Here's a list of essential applications and tools installed via `apt`.
 
 ```bash
-sudo apt install git wget gnome-shell-extension-apps-menu gnome-boxes gnome-snapshot gnome-characters gnome-clocks gnome-console gnome-disk-utility baobab gnome-shell-extension-manager gnome-shell-extension-prefs fastfetch file-roller font-manager gnome-tweaks libreoffice gnome-logs seahorse remmina gnome-connections gnome-sound-recorder gnome-system-monitor gnome-text-editor qbittorrent wine evince epiphany-browser nomacs-l10n diodon yt-dlp mpv libmpv-dev aptitude mc ncdu ddcutil ddccontrol gddccontrol ddccontrol-db i2c-tools curl ca-certificates qalculate-gtk fuse libfuse-dev gir1.2-gnomedesktop-3.0 python3-dbus python3-gi gir1.2-glib-2.0 dbus -y
+sudo apt install git wget gnome-shell-extension-apps-menu gnome-boxes gnome-snapshot gnome-characters gnome-clocks gnome-console gnome-disk-utility baobab gnome-shell-extension-manager gnome-shell-extension-prefs fastfetch file-roller font-manager gnome-tweaks libreoffice gnome-logs seahorse remmina gnome-connections gnome-sound-recorder gnome-system-monitor gnome-text-editor qbittorrent wine evince epiphany-browser nomacs-l10n diodon yt-dlp mpv libmpv-dev aptitude mc ncdu ddcutil ddccontrol gddccontrol ddccontrol-db i2c-tools curl ca-certificates qalculate-gtk fuse libfuse-dev gir1.2-gnomedesktop-3.0 python3-dbus python3-gi gir1.2-glib-2.0 dbus python3-full ffmpeg -y
 sudo modprobe i2c-dev
 sudo gpasswd -a "$USER" i2c
 ```
@@ -353,7 +353,7 @@ sudo dpkg -i --force-overwrite /var/cache/apt/archives/python3.13_3.13.5-5_amd64
 
 If Python cannot find any system installed dependency, do this:
 ```bash
-echo "/usr/lib/python3/dist-packages" | sudo tee /usr/lib/python3.13/site-packages/debian_dist_packages.pth
+grep -qxF "/usr/lib/python3/dist-packages" /usr/lib/python3.13/site-packages/debian_dist_packages.pth 2>/dev/null || echo "/usr/lib/python3/dist-packages" | sudo tee -a /usr/lib/python3.13/site-packages/debian_dist_packages.pth
 ```
 
 Then, rerun the update command above.
