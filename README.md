@@ -361,4 +361,4 @@ Then, rerun the update command above.
 
 Reboot one last time, and you should be good to go.
 
-(*Extra*)[https://docs.google.com/document/d/14fZTNXHTvwtGg4zEr4JCuajR_uytKWGnToI8DPPUmBQ/edit?usp=sharing]
+[*Extra*](https://docs.google.com/document/d/14fZTNXHTvwtGg4zEr4JCuajR_uytKWGnToI8DPPUmBQ/edit?usp=sharing)
