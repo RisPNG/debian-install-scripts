@@ -331,7 +331,7 @@ This is the final step for configuration. Do this last.
 3.  Enable all user extensions through the GNOME Extensions application.
 4.  Load all settings by running:
     ```bash
-    curl -s https://raw.githubusercontent.com/RisPNG/debian-install-scripts/refs/heads/main/all-settings.conf | dconf load /
+    curl -s https://raw.githubusercontent.com/RisPNG/debian-install-scripts/refs/heads/main/ares.conf | dconf load /
     ```
 5.  You might need to adjust Dash to Panel settings manually (e.g., invisible center box, taskbar stacked to the left).
 6.  Reboot again.
