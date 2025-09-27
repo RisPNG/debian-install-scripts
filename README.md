@@ -27,8 +27,9 @@ First, you gotta boot from the `debian-live-13.0.0-amd64-gnome.iso`.
     *   Create a "New Partition Table" with the "GPT" scheme.
     *   Create a 1024 MiB `fat32` partition for `/boot/efi` and set the `boot` flag.
     *   Create a `btrfs` partition using the remaining space for the root directory (`/`).
+    *   If you have any additional disks, you can create a `btrfs` partition for the directory (`/ext1`, `/ext2`, ...).
 6.  Proceed to set up your user account and complete the installation.
-7.  Once you've booted into your new system, it's a good idea to install `timeshift` and create your first "Perfect installation" snapshot as a backup.
+7.  Once you've booted into your new system, it's a good idea to install `timeshift` and create your first "Initial installation" snapshot as a backup.
 
 ## System Preparation
 
