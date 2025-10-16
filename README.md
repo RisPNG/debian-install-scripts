@@ -62,7 +62,7 @@ sudo systemctl enable grub-btrfsd
 Trimming the fat. Feel free to customize this list to your liking.
 
 ```bash
-sudo apt purge gnome-calculator gnome-contacts gnome-calendar gnome-terminal evolution fcitx5 gnome-font-viewer goldendict-ng loupe gnome-music malcontent shotwell thunderbird gnome-tour totem gnome-weather xiterm+thai kasumi -y && sudo apt update && sudo apt autoclean -y && sudo apt autopurge -y && sudo apt autoremove -y && sudo apt clean -y
+sudo apt purge gnome-calculator gnome-contacts gnome-calendar evolution fcitx5 gnome-font-viewer goldendict-ng loupe gnome-music malcontent shotwell thunderbird gnome-tour totem gnome-weather xiterm+thai kasumi -y && sudo apt update && sudo apt autoclean -y && sudo apt autopurge -y && sudo apt autoremove -y && sudo apt clean -y
 ```
 
 ### Add `contrib`, `non-free`, and `non-free-firmware` Repositories
