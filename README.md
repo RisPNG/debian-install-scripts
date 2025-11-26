@@ -96,6 +96,14 @@ Now, it's time for a reboot.
 sudo reboot -h 0
 ```
 
+#### Enabling Secure Boot w/ NVIDIA Driver (Untested)
+
+First, trust the key from the generated key
+```bash
+sudo mokutil --import /var/lib/dkms/mok.pub
+```
+Enter the password for this key, then reboot, enroll the key, enter the same password, then reboot again and enable secure boot.
+
 ## Package Installation
 
 ### Main Packages (Native)
