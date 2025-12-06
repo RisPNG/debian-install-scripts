@@ -1,12 +1,17 @@
 #!/bin/bash
 
-# Configuration
-GITHUB_USER="RisPNG"
+# Debian Modular Installer Script
+# Uses Charm Gum for interactive UI
+# Reads install options from GitHub repo
+
+set -e
+
+REPO_OWNER="RisPNG"
 REPO_NAME="debian-install-scripts"
 BRANCH="main"
 OPTIONS_PATH="options"
-API_URL="https://api.github.com/repos/${GITHUB_USER}/${REPO_NAME}/contents/${OPTIONS_PATH}?ref=${BRANCH}"
-RAW_URL="https://raw.githubusercontent.com/${GITHUB_USER}/${REPO_NAME}/${BRANCH}"
+GITHUB_API="https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${OPTIONS_PATH}?ref=${BRANCH}"
+RAW_BASE="https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/${BRANCH}/${OPTIONS_PATH}"
 
 # Colors for output
 RED='\033[0;31m'
@@ -15,277 +20,194 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Install gum if not present
-install_gum() {
+# Check if gum is installed
+check_gum() {
     if ! command -v gum &> /dev/null; then
-        echo -e "${YELLOW}Installing gum...${NC}"
-        
-        # Detect architecture
-        ARCH=$(dpkg --print-architecture)
-        
-        # Get latest release
-        GUM_VERSION=$(curl -s https://api.github.com/repos/charmbracelet/gum/releases/latest | grep -oP '"tag_name": "\K(.*)(?=")')
-        
-        if [ -z "$GUM_VERSION" ]; then
-            echo -e "${RED}Could not determine latest gum version${NC}"
-            exit 1
-        fi
-        
-        # Download and install
-        GUM_DEB="gum_${GUM_VERSION#v}_${ARCH}.deb"
-        wget -q "https://github.com/charmbracelet/gum/releases/download/${GUM_VERSION}/${GUM_DEB}" -O /tmp/gum.deb
-        
-        sudo dpkg -i /tmp/gum.deb
-        rm /tmp/gum.deb
-        
-        echo -e "${GREEN}gum installed successfully!${NC}"
+        echo -e "${YELLOW}Charm Gum is not installed. Installing...${NC}"
+        # Install gum
+        sudo mkdir -p /etc/apt/keyrings
+        curl -fsSL https://repo.charm.sh/apt/gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/charm.gpg
+        echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" | sudo tee /etc/apt/sources.list.d/charm.list
+        sudo apt update && sudo apt install gum -y
+        echo -e "${GREEN}Gum installed successfully!${NC}"
     fi
 }
 
-# Check dependencies
+# Check for required tools
 check_dependencies() {
-    local deps=("curl" "jq" "wget")
     local missing=()
     
-    for dep in "${deps[@]}"; do
-        if ! command -v "$dep" &> /dev/null; then
-            missing+=("$dep")
+    for cmd in curl jq; do
+        if ! command -v "$cmd" &> /dev/null; then
+            missing+=("$cmd")
         fi
     done
     
-    if [ ${#missing[@]} -gt 0 ]; then
+    if [ ${#missing[@]} -ne 0 ]; then
         echo -e "${YELLOW}Installing missing dependencies: ${missing[*]}${NC}"
-        sudo apt update
-        sudo apt install -y "${missing[@]}"
+        sudo apt update && sudo apt install -y "${missing[@]}"
     fi
-    
-    # Install gum
-    install_gum
 }
 
 # Fetch available options from GitHub
 fetch_options() {
-    gum style --foreground 212 --border double --padding "1 2" --margin "1" "Fetching available options from GitHub..."
+    echo -e "${BLUE}Fetching available install options from GitHub...${NC}"
     
-    local response=$(curl -s "$API_URL")
+    local response
+    response=$(curl -s "$GITHUB_API")
     
-    if [ -z "$response" ]; then
-        gum style --foreground 214 "⚠️  Could not connect to GitHub. System options only."
-        echo ""
-        return
+    # Check for API errors
+    if echo "$response" | jq -e '.message' &> /dev/null; then
+        echo -e "${RED}Error fetching from GitHub: $(echo "$response" | jq -r '.message')${NC}"
+        exit 1
     fi
     
-    # Parse folder names using jq
-    local folders=$(echo "$response" | jq -r '.[] | select(.type=="dir") | .name')
+    # Get directories only (type == "dir")
+    FOLDERS=$(echo "$response" | jq -r '.[] | select(.type == "dir") | .name')
     
-    # Return folders (can be empty)
-    echo "$folders"
+    if [ -z "$FOLDERS" ]; then
+        echo -e "${RED}No install options found in the repository.${NC}"
+        exit 1
+    fi
 }
 
-# Create gum menu from folders
-create_menu() {
-    local folders=("$@")
-    local display_items=()
-    local has_packages=false
+# Convert folder name to display name (replace dashes with spaces)
+to_display_name() {
+    echo "$1" | sed 's/-/ /g'
+}
+
+# Convert display name back to folder name (replace spaces with dashes)
+to_folder_name() {
+    echo "$1" | sed 's/ /-/g'
+}
+
+# Run apt maintenance commands
+run_apt_maintenance() {
+    echo -e "${BLUE}Running APT maintenance...${NC}"
     
-    # Add available packages
-    if [ ${#folders[@]} -gt 0 ] && [ -n "${folders[0]}" ]; then
-        has_packages=true
-        gum style --foreground 212 --bold "📦 Available Packages:"
-        echo ""
-        
-        for folder in "${folders[@]}"; do
-            # Replace dashes with spaces for display
-            local display_name="${folder//-/ }"
-            display_items+=("$display_name")
-        done
+    sudo apt update
+    
+    # Check if modernize-sources exists (newer apt versions)
+    if apt-get --help 2>&1 | grep -q "modernize-sources"; then
+        sudo apt modernize-sources -y
+        sudo apt update
+    fi
+    
+    sudo apt upgrade -y
+    sudo apt full-upgrade -y
+    sudo apt dist-upgrade -y
+    sudo apt update
+    sudo apt autoclean -y
+    
+    # Use autopurge if available, otherwise autoremove with purge
+    if apt-get --help 2>&1 | grep -q "autopurge"; then
+        sudo apt autopurge -y
     else
-        # No packages available
-        gum style --foreground 214 --bold "ℹ️  No packages available in options/ folder"
-        echo ""
-        gum style --foreground 250 "Add folders to options/ in the GitHub repo to see them here."
-        echo ""
+        sudo apt autoremove --purge -y
     fi
     
-    # Add default system options (always available)
-    gum style --foreground 212 --bold "⚙️  System Options:"
-    echo ""
+    sudo apt autoremove -y
+    sudo apt clean -y
     
-    local system_options=("Update-System-Only" "Exit")
-    for option in "${system_options[@]}"; do
-        display_items+=("$option")
-    done
-    
-    # Show multi-select menu using gum
-    local selected=$(printf '%s\n' "${display_items[@]}" | \
-        gum choose --no-limit \
-        --cursor.foreground 212 \
-        --header "Use ↑/↓ to navigate, Space to select, Enter to confirm" \
-        --height 15)
-    
-    # Convert display names back to folder names
-    if [ -n "$selected" ]; then
-        echo "$selected" | while IFS= read -r line; do
-            # Replace spaces back to dashes
-            echo "${line// /-}"
-        done
-    fi
+    echo -e "${GREEN}APT maintenance complete!${NC}"
 }
 
-# Run system update commands
-run_updates() {
-    gum style --foreground 212 --bold "Running system updates..."
+# Download and run script for a selected option
+run_install_script() {
+    local folder="$1"
+    local script_url="${RAW_BASE}/${folder}/run.sh"
+    local temp_script="/tmp/install_${folder}_run.sh"
     
-    gum spin --spinner dot --title "Updating system..." -- \
-        bash -c 'sudo apt update && \
-        sudo apt modernize-sources -y && \
-        sudo apt update && \
-        sudo apt upgrade -y && \
-        sudo apt full-upgrade -y && \
-        sudo apt dist-upgrade -y && \
-        sudo apt update && \
-        sudo apt autoclean -y && \
-        sudo apt autopurge -y && \
-        sudo apt autoremove -y && \
-        sudo apt clean -y'
-}
-
-# Download and execute run.sh from selected folder
-execute_script() {
-    local folder=$1
-    local display_name="${folder//-/ }"
-    local script_url="${RAW_URL}/${OPTIONS_PATH}/${folder}/run.sh"
-    local temp_script="/tmp/${folder}_run.sh"
+    echo -e "${BLUE}Downloading install script for: $(to_display_name "$folder")${NC}"
     
-    gum style --foreground 212 --bold "Installing: ${display_name}"
-    
-    # Download the script
-    if curl -sSL "$script_url" -o "$temp_script" 2>/dev/null; then
-        # Make it executable
+    if curl -fsSL "$script_url" -o "$temp_script"; then
         chmod +x "$temp_script"
-        
-        # Execute it
+        echo -e "${GREEN}Running install script for: $(to_display_name "$folder")${NC}"
         bash "$temp_script"
-        
-        # Clean up
         rm -f "$temp_script"
-        
-        gum style --foreground 42 "✓ Completed: ${display_name}"
-        echo ""
     else
-        gum style --foreground 196 "✗ Error: Could not download ${script_url}"
+        echo -e "${RED}Failed to download run.sh for: $(to_display_name "$folder")${NC}"
         return 1
     fi
 }
 
 # Main function
 main() {
-    clear
-    
-    gum style \
-        --foreground 212 --border-foreground 212 --border double \
-        --align center --width 50 --margin "1 2" --padding "2 4" \
-        'Debian Modular Installer' 'Powered by Charm'
-    
-    echo ""
+    echo -e "${GREEN}"
+    echo "╔═══════════════════════════════════════════════════════════╗"
+    echo "║          Debian Modular Installer                         ║"
+    echo "║          Using Charm Gum for interactive selection        ║"
+    echo "╚═══════════════════════════════════════════════════════════╝"
+    echo -e "${NC}"
     
     # Check and install dependencies
     check_dependencies
-    
-    echo ""
+    check_gum
     
     # Fetch available options
-    folders=$(fetch_options)
+    fetch_options
     
-    # Convert to array (even if empty)
-    if [ -n "$folders" ]; then
-        readarray -t folder_array <<< "$folders"
+    # Build display names array
+    declare -a display_names
+    while IFS= read -r folder; do
+        display_names+=("$(to_display_name "$folder")")
+    done <<< "$FOLDERS"
+    
+    # Show selection UI with gum
+    echo -e "${YELLOW}Use arrow keys to navigate, Space to select/deselect, Enter to confirm${NC}"
+    echo ""
+    
+    # Use gum choose with multi-select
+    selected=$(printf '%s\n' "${display_names[@]}" | gum choose --no-limit --cursor.foreground="212" --selected.foreground="120" --header="Select packages to install:")
+    
+    # Check if anything was selected
+    if [ -z "$selected" ]; then
+        echo -e "${YELLOW}No options selected. Exiting.${NC}"
+        exit 0
+    fi
+    
+    # Show what will be installed
+    echo ""
+    echo -e "${BLUE}You have selected the following for installation:${NC}"
+    echo "$selected" | while read -r name; do
+        echo -e "  ${GREEN}✓${NC} $name"
+    done
+    echo ""
+    
+    # Confirm installation
+    if gum confirm "Proceed with installation?"; then
+        echo ""
+        echo -e "${GREEN}Starting installation process...${NC}"
+        echo ""
+        
+        # Run pre-install apt maintenance
+        echo -e "${BLUE}═══ PRE-INSTALL MAINTENANCE ═══${NC}"
+        run_apt_maintenance
+        echo ""
+        
+        # Run install scripts for each selected option
+        echo -e "${BLUE}═══ INSTALLING SELECTED PACKAGES ═══${NC}"
+        echo "$selected" | while read -r display_name; do
+            folder_name=$(to_folder_name "$display_name")
+            echo ""
+            echo -e "${YELLOW}────────────────────────────────────────${NC}"
+            run_install_script "$folder_name"
+        done
+        echo ""
+        
+        # Run post-install apt maintenance
+        echo -e "${BLUE}═══ POST-INSTALL MAINTENANCE ═══${NC}"
+        run_apt_maintenance
+        echo ""
+        
+        echo -e "${GREEN}╔═══════════════════════════════════════════════════════════╗${NC}"
+        echo -e "${GREEN}║          Installation Complete!                           ║${NC}"
+        echo -e "${GREEN}╚═══════════════════════════════════════════════════════════╝${NC}"
     else
-        folder_array=()
-    fi
-    
-    echo ""
-    
-    # Show menu and get selection
-    selected=$(create_menu "${folder_array[@]}")
-    
-    if [ -z "$selected" ]; then
-        echo ""
-        gum style --foreground 214 "No selection made. Exiting."
+        echo -e "${YELLOW}Installation cancelled.${NC}"
         exit 0
     fi
-    
-    # Check if user selected Exit
-    if echo "$selected" | grep -q "^Exit$"; then
-        echo ""
-        gum style --foreground 214 "Exiting installer. Goodbye! 👋"
-        exit 0
-    fi
-    
-    # Check if only Update-System-Only was selected
-    if [ "$(echo "$selected" | wc -l)" -eq 1 ] && echo "$selected" | grep -q "^Update-System-Only$"; then
-        echo ""
-        gum style --foreground 212 --bold "Running system updates only..."
-        echo ""
-        run_updates
-        echo ""
-        gum style --foreground 42 "✓ System updates complete!"
-        exit 0
-    fi
-    
-    # Filter out system options from package list
-    selected=$(echo "$selected" | grep -v "^Update-System-Only$" | grep -v "^Exit$")
-    
-    echo ""
-    
-    # Check if any packages were selected (after filtering system options)
-    if [ -z "$selected" ]; then
-        echo ""
-        gum style --foreground 214 "No packages selected. Exiting."
-        exit 0
-    fi
-    
-    # Show selected packages
-    gum style --foreground 212 --bold "Selected packages:"
-    echo "$selected" | while IFS= read -r line; do
-        echo "  • ${line//-/ }"
-    done
-    
-    echo ""
-    
-    # Ask for confirmation
-    gum confirm "Proceed with installation?" || {
-        gum style --foreground 214 "Installation cancelled."
-        exit 0
-    }
-    
-    echo ""
-    
-    # Run pre-installation updates
-    gum style --border double --padding "0 1" --border-foreground 212 "Pre-Installation Updates"
-    run_updates
-    
-    echo ""
-    
-    # Execute selected scripts
-    gum style --border double --padding "0 1" --border-foreground 212 "Installing Selected Packages"
-    echo ""
-    
-    echo "$selected" | while IFS= read -r folder; do
-        execute_script "$folder"
-    done
-    
-    # Run post-installation updates
-    gum style --border double --padding "0 1" --border-foreground 212 "Post-Installation Updates"
-    run_updates
-    
-    echo ""
-    
-    gum style \
-        --foreground 42 --border-foreground 42 --border double \
-        --align center --width 50 --margin "1 2" --padding "1 4" \
-        '✓ Installation Complete!'
 }
 
 # Run main function
-main
+main "$@"
