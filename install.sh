@@ -70,18 +70,15 @@ fetch_options() {
     local response=$(curl -s "$API_URL")
     
     if [ -z "$response" ]; then
-        gum style --foreground 196 "Error: Could not fetch options from GitHub"
-        exit 1
+        gum style --foreground 214 "⚠️  Could not connect to GitHub. System options only."
+        echo ""
+        return
     fi
     
     # Parse folder names using jq
     local folders=$(echo "$response" | jq -r '.[] | select(.type=="dir") | .name')
     
-    if [ -z "$folders" ]; then
-        gum style --foreground 196 "Error: No folders found in ${OPTIONS_PATH}"
-        exit 1
-    fi
-    
+    # Return folders (can be empty)
     echo "$folders"
 }
 
@@ -89,17 +86,37 @@ fetch_options() {
 create_menu() {
     local folders=("$@")
     local display_items=()
+    local has_packages=false
     
-    for folder in "${folders[@]}"; do
-        # Replace dashes with spaces for display
-        local display_name="${folder//-/ }"
-        display_items+=("$display_name")
+    # Add available packages
+    if [ ${#folders[@]} -gt 0 ] && [ -n "${folders[0]}" ]; then
+        has_packages=true
+        gum style --foreground 212 --bold "📦 Available Packages:"
+        echo ""
+        
+        for folder in "${folders[@]}"; do
+            # Replace dashes with spaces for display
+            local display_name="${folder//-/ }"
+            display_items+=("$display_name")
+        done
+    else
+        # No packages available
+        gum style --foreground 214 --bold "ℹ️  No packages available in options/ folder"
+        echo ""
+        gum style --foreground 250 "Add folders to options/ in the GitHub repo to see them here."
+        echo ""
+    fi
+    
+    # Add default system options (always available)
+    gum style --foreground 212 --bold "⚙️  System Options:"
+    echo ""
+    
+    local system_options=("Update-System-Only" "Exit")
+    for option in "${system_options[@]}"; do
+        display_items+=("$option")
     done
     
     # Show multi-select menu using gum
-    gum style --foreground 212 --bold "Select packages to install:"
-    echo ""
-    
     local selected=$(printf '%s\n' "${display_items[@]}" | \
         gum choose --no-limit \
         --cursor.foreground 212 \
@@ -180,13 +197,12 @@ main() {
     # Fetch available options
     folders=$(fetch_options)
     
-    if [ -z "$folders" ]; then
-        gum style --foreground 196 "No options available"
-        exit 1
+    # Convert to array (even if empty)
+    if [ -n "$folders" ]; then
+        readarray -t folder_array <<< "$folders"
+    else
+        folder_array=()
     fi
-    
-    # Convert to array
-    readarray -t folder_array <<< "$folders"
     
     echo ""
     
@@ -195,11 +211,39 @@ main() {
     
     if [ -z "$selected" ]; then
         echo ""
-        gum style --foreground 214 "No packages selected. Exiting."
+        gum style --foreground 214 "No selection made. Exiting."
         exit 0
     fi
     
+    # Check if user selected Exit
+    if echo "$selected" | grep -q "^Exit$"; then
+        echo ""
+        gum style --foreground 214 "Exiting installer. Goodbye! 👋"
+        exit 0
+    fi
+    
+    # Check if only Update-System-Only was selected
+    if [ "$(echo "$selected" | wc -l)" -eq 1 ] && echo "$selected" | grep -q "^Update-System-Only$"; then
+        echo ""
+        gum style --foreground 212 --bold "Running system updates only..."
+        echo ""
+        run_updates
+        echo ""
+        gum style --foreground 42 "✓ System updates complete!"
+        exit 0
+    fi
+    
+    # Filter out system options from package list
+    selected=$(echo "$selected" | grep -v "^Update-System-Only$" | grep -v "^Exit$")
+    
     echo ""
+    
+    # Check if any packages were selected (after filtering system options)
+    if [ -z "$selected" ]; then
+        echo ""
+        gum style --foreground 214 "No packages selected. Exiting."
+        exit 0
+    fi
     
     # Show selected packages
     gum style --foreground 212 --bold "Selected packages:"
