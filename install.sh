@@ -221,14 +221,14 @@ fetch_options() {
     fi
 }
 
-# Convert folder name to display name (replace dashes with spaces)
+# Convert folder name to display name (replace double dashes with spaces)
 to_display_name() {
-    echo "$1" | sed 's/-/ /g'
+    echo "$1" | sed 's/--/ /g'
 }
 
-# Convert display name back to folder name (replace spaces with dashes)
+# Convert display name back to folder name (replace spaces with double dashes)
 to_folder_name() {
-    echo "$1" | sed 's/ /-/g'
+    echo "$1" | sed 's/ /--/g'
 }
 
 # Run apt maintenance commands
