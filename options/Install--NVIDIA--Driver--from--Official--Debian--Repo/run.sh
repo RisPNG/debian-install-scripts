@@ -1,7 +1,10 @@
 sudo mkdir -p /etc/apt/sources.list.d
+timestamp="$(date +%F-%H%M%S)"
+backup_dir=""
 
 if [ -f /etc/apt/sources.list.d/debian.sources ]; then
-  sudo cp -a /etc/apt/sources.list.d/debian.sources "/etc/apt/sources.list.d/debian.sources.bak.$(date +%F-%H%M%S)"
+  backup_dir="${backup_dir:-$(mktemp -d /tmp/apt-sources-backup-XXXXXX)}"
+  sudo mv /etc/apt/sources.list.d/debian.sources "$backup_dir/debian.sources.bak.$timestamp"
 fi
 
 sudo tee /etc/apt/sources.list.d/debian.sources >/dev/null <<'EOF'
@@ -36,7 +39,8 @@ Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
 EOF
 
 if [ -f /etc/apt/sources.list ]; then
-  sudo mv /etc/apt/sources.list "/etc/apt/sources.list.bak.$(date +%F-%H%M%S)"
+  backup_dir="${backup_dir:-$(mktemp -d /tmp/apt-sources-backup-XXXXXX)}"
+  sudo mv /etc/apt/sources.list "$backup_dir/sources.list.bak.$timestamp"
 fi
 
 sudo apt update
