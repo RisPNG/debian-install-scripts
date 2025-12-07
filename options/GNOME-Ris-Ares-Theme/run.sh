@@ -1,0 +1,1 @@
+curl -s https://raw.githubusercontent.com/RisPNG/debian-install-scripts/refs/heads/main/Ares.conf | dconf load /

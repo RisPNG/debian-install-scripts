@@ -1,0 +1,1 @@
+echo "$(whoami) ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/99-$(whoami)-nopasswd > /dev/null && sudo visudo -c

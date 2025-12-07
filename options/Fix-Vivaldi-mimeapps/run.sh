@@ -1,0 +1,1 @@
+echo "x-scheme-handler/vivaldi=vivaldi-stable.desktop" >> ~/.config/mimeapps.list

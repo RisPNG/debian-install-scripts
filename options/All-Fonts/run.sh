@@ -1,0 +1,1 @@
+sudo apt install fonts-* --no-install-recommends --no-install-suggests -y

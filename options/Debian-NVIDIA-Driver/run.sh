@@ -1,0 +1,1 @@
+sudo apt install nvidia-kernel-dkms nvidia-driver firmware-misc-nonfree -y
