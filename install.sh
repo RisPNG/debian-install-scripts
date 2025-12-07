@@ -274,20 +274,20 @@ run_install_script() {
     
     if [ "$USE_LOCAL_OPTIONS" = true ] && [ -f "$local_script" ]; then
         echo -e "${BLUE}Using local install script for: $(to_display_name "$folder")${NC}"
-        bash "$local_script"
+        DEBIAN_FRONTEND=noninteractive bash "$local_script"
         return
     fi
 
     echo -e "${BLUE}Downloading install script for: $(to_display_name "$folder")${NC}"
-    
+
     if curl -fsSL "$script_url" -o "$temp_script"; then
         chmod +x "$temp_script"
         echo -e "${GREEN}Running install script for: $(to_display_name "$folder")${NC}"
-        bash "$temp_script"
+        DEBIAN_FRONTEND=noninteractive bash "$temp_script"
         rm -f "$temp_script"
     elif [ -f "$local_script" ]; then
         echo -e "${YELLOW}Download failed. Falling back to local run.sh for: $(to_display_name "$folder")${NC}"
-        bash "$local_script"
+        DEBIAN_FRONTEND=noninteractive bash "$local_script"
     else
         echo -e "${RED}Failed to download run.sh for: $(to_display_name "$folder") and no local copy was found.${NC}"
         return 1
