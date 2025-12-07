@@ -12,6 +12,10 @@ BRANCH="main"
 OPTIONS_PATH="options"
 GITHUB_API="https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${OPTIONS_PATH}?ref=${BRANCH}"
 RAW_BASE="https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/${BRANCH}/${OPTIONS_PATH}"
+USE_LOCAL_OPTIONS=false
+TEMP_CLONE_DIR=""
+# Default to git-based option fetch to avoid API rate limits
+: "${GITHUB_FETCH_WITH_GIT:=1}"
 
 # Colors for output
 RED='\033[0;31m'
@@ -19,6 +23,14 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
+export DEBIAN_FRONTEND="${DEBIAN_FRONTEND:-noninteractive}"
+
+is_truthy() {
+    case "${1,,}" in
+        1|true|yes|on) return 0 ;;
+        *) return 1 ;;
+    esac
+}
 
 # Check if gum is installed
 check_gum() {
@@ -42,6 +54,12 @@ check_dependencies() {
             missing+=("$cmd")
         fi
     done
+
+    if is_truthy "${GITHUB_FETCH_WITH_GIT:-}" || is_truthy "${NO_GITHUB_API:-}"; then
+        if ! command -v git &> /dev/null; then
+            missing+=("git")
+        fi
+    fi
     
     if [ ${#missing[@]} -ne 0 ]; then
         echo -e "${YELLOW}Installing missing dependencies: ${missing[*]}${NC}"
@@ -49,25 +67,157 @@ check_dependencies() {
     fi
 }
 
+# Fall back to the local options/ directory when GitHub API cannot be used
+use_local_options_directory() {
+    if [ -d "$OPTIONS_PATH" ]; then
+        local local_folders=()
+        for dir in "$OPTIONS_PATH"/*/; do
+            [ -d "$dir" ] || continue
+            local_folders+=("$(basename "$dir")")
+        done
+
+        if [ ${#local_folders[@]} -gt 0 ]; then
+            FOLDERS=$(printf '%s\n' "${local_folders[@]}")
+            echo -e "${YELLOW}Using local options directory instead of GitHub API.${NC}"
+            USE_LOCAL_OPTIONS=true
+            return 0
+        fi
+    fi
+
+    return 1
+}
+
+# Ensure dpkg/apt are not left in an interrupted state
+ensure_package_system_ready() {
+    echo -e "${BLUE}Checking package manager state...${NC}"
+
+    if ! sudo dpkg --configure -a; then
+        echo -e "${RED}dpkg --configure -a failed. Please resolve package manager issues and re-run the installer.${NC}"
+        exit 1
+    fi
+
+    if ! sudo apt-get -f install -y; then
+        echo -e "${RED}Failed to repair packages with 'apt-get -f install'. Resolve package issues and retry.${NC}"
+        exit 1
+    fi
+}
+
+cleanup_temp_clone() {
+    if [ -n "$TEMP_CLONE_DIR" ] && [ -d "$TEMP_CLONE_DIR" ]; then
+        rm -rf "$TEMP_CLONE_DIR"
+    fi
+}
+
+fetch_options_via_git_clone() {
+    if ! command -v git &> /dev/null; then
+        echo -e "${YELLOW}git is not installed; cannot fetch options via git.${NC}"
+        return 1
+    fi
+
+    TEMP_CLONE_DIR=$(mktemp -d)
+    echo -e "${BLUE}Cloning options via git (no GitHub API)...${NC}"
+
+    if ! git clone --depth 1 --branch "$BRANCH" "https://github.com/${REPO_OWNER}/${REPO_NAME}.git" "$TEMP_CLONE_DIR" >/dev/null 2>&1; then
+        echo -e "${RED}git clone failed; cannot fetch options via git.${NC}"
+        cleanup_temp_clone
+        return 1
+    fi
+
+    local options_dir="${TEMP_CLONE_DIR}/${OPTIONS_PATH}"
+    if [ ! -d "$options_dir" ]; then
+        echo -e "${RED}Cloned repository does not contain ${OPTIONS_PATH}.${NC}"
+        cleanup_temp_clone
+        return 1
+    fi
+
+    local local_folders=()
+    for dir in "$options_dir"/*/; do
+        [ -d "$dir" ] || continue
+        local_folders+=("$(basename "$dir")")
+    done
+
+    if [ ${#local_folders[@]} -eq 0 ]; then
+        echo -e "${RED}No install options found in cloned repository.${NC}"
+        cleanup_temp_clone
+        return 1
+    fi
+
+    FOLDERS=$(printf '%s\n' "${local_folders[@]}")
+    OPTIONS_PATH="$options_dir"
+    USE_LOCAL_OPTIONS=true
+    echo -e "${YELLOW}Using options from git clone (no GitHub API).${NC}"
+    return 0
+}
+
 # Fetch available options from GitHub
 fetch_options() {
     echo -e "${BLUE}Fetching available install options from GitHub...${NC}"
+
+    if is_truthy "${GITHUB_FETCH_WITH_GIT:-}" || is_truthy "${NO_GITHUB_API:-}"; then
+        if fetch_options_via_git_clone; then
+            return
+        fi
+        echo -e "${YELLOW}Git-based fetch failed; continuing with GitHub API/local fallback.${NC}"
+    fi
+
+    local auth_header=()
+    if [ -n "$GITHUB_TOKEN" ]; then
+        auth_header=(-H "Authorization: Bearer $GITHUB_TOKEN")
+        echo -e "${YELLOW}Using GITHUB_TOKEN for GitHub API requests.${NC}"
+    elif [ -n "$GH_TOKEN" ]; then
+        auth_header=(-H "Authorization: Bearer $GH_TOKEN")
+        echo -e "${YELLOW}Using GH_TOKEN for GitHub API requests.${NC}"
+    fi
     
     local response
-    response=$(curl -s "$GITHUB_API")
+    response=$(curl -sSL "${auth_header[@]}" "$GITHUB_API" || true)
     
     # Check for API errors
+    if [ -z "$response" ]; then
+        echo -e "${YELLOW}GitHub API returned an empty response. Checking local options directory...${NC}"
+        if fetch_options_via_git_clone; then
+            return
+        fi
+        if ! use_local_options_directory; then
+            echo -e "${RED}Failed to fetch install options from GitHub and no local options were found.${NC}"
+            exit 1
+        fi
+        return
+    fi
+
     if echo "$response" | jq -e '.message' &> /dev/null; then
-        echo -e "${RED}Error fetching from GitHub: $(echo "$response" | jq -r '.message')${NC}"
-        exit 1
+        local api_message
+        api_message=$(echo "$response" | jq -r '.message')
+        echo -e "${YELLOW}GitHub API responded with: ${api_message}${NC}"
+
+        if [[ "$api_message" == *"API rate limit exceeded"* ]]; then
+            echo -e "${YELLOW}Tip: set GITHUB_TOKEN or GH_TOKEN to raise the rate limit.${NC}"
+        fi
+
+        if fetch_options_via_git_clone; then
+            return
+        fi
+
+        if ! use_local_options_directory; then
+            echo -e "${RED}Failed to fetch install options from GitHub and no local options were found.${NC}"
+            exit 1
+        fi
+        return
     fi
     
     # Get directories only (type == "dir")
     FOLDERS=$(echo "$response" | jq -r '.[] | select(.type == "dir") | .name')
     
     if [ -z "$FOLDERS" ]; then
-        echo -e "${RED}No install options found in the repository.${NC}"
-        exit 1
+        echo -e "${YELLOW}No install options returned by GitHub API. Checking local options directory...${NC}"
+        if fetch_options_via_git_clone; then
+            return
+        fi
+
+        if ! use_local_options_directory; then
+            echo -e "${RED}No install options found in the repository.${NC}"
+            exit 1
+        fi
     fi
 }
 
@@ -84,6 +234,8 @@ to_folder_name() {
 # Run apt maintenance commands
 run_apt_maintenance() {
     echo -e "${BLUE}Running APT maintenance...${NC}"
+    
+    ensure_package_system_ready
     
     sudo apt update
     
@@ -108,6 +260,7 @@ run_apt_maintenance() {
     
     sudo apt autoremove -y
     sudo apt clean -y
+    ensure_package_system_ready
     
     echo -e "${GREEN}APT maintenance complete!${NC}"
 }
@@ -117,7 +270,14 @@ run_install_script() {
     local folder="$1"
     local script_url="${RAW_BASE}/${folder}/run.sh"
     local temp_script="/tmp/install_${folder}_run.sh"
+    local local_script="${OPTIONS_PATH}/${folder}/run.sh"
     
+    if [ "$USE_LOCAL_OPTIONS" = true ] && [ -f "$local_script" ]; then
+        echo -e "${BLUE}Using local install script for: $(to_display_name "$folder")${NC}"
+        bash "$local_script"
+        return
+    fi
+
     echo -e "${BLUE}Downloading install script for: $(to_display_name "$folder")${NC}"
     
     if curl -fsSL "$script_url" -o "$temp_script"; then
@@ -125,8 +285,11 @@ run_install_script() {
         echo -e "${GREEN}Running install script for: $(to_display_name "$folder")${NC}"
         bash "$temp_script"
         rm -f "$temp_script"
+    elif [ -f "$local_script" ]; then
+        echo -e "${YELLOW}Download failed. Falling back to local run.sh for: $(to_display_name "$folder")${NC}"
+        bash "$local_script"
     else
-        echo -e "${RED}Failed to download run.sh for: $(to_display_name "$folder")${NC}"
+        echo -e "${RED}Failed to download run.sh for: $(to_display_name "$folder") and no local copy was found.${NC}"
         return 1
     fi
 }
@@ -139,7 +302,11 @@ main() {
     echo "║          Using Charm Gum for interactive selection        ║"
     echo "╚═══════════════════════════════════════════════════════════╝"
     echo -e "${NC}"
+
+    trap cleanup_temp_clone EXIT
     
+    ensure_package_system_ready
+
     # Check and install dependencies
     check_dependencies
     check_gum
