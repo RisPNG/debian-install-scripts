@@ -1,4 +1,9 @@
-wget $(curl -s https://api.github.com/repos/IsmaelMartinez/teams-for-linux/releases/latest | jq -r '.assets[] | select(.name | endswith("amd64.deb")) | .browser_download_url') -O ~/Downloads/teams-latest.deb && sudo apt install ~/Downloads/teams-latest.deb -y
+# Get the latest Teams for Linux download URL
+download_url=$(curl -fsSL https://api.github.com/repos/IsmaelMartinez/teams-for-linux/releases/latest | jq -r '.assets[] | select(.name | endswith("amd64.deb")) | .browser_download_url')
+
+# Download and install
+wget "$download_url" -O ~/Downloads/teams-latest.deb
+sudo apt install ~/Downloads/teams-latest.deb -y
 sudo tee /usr/share/applications/teams-for-linux.desktop > /dev/null <<'EOF'
 [Desktop Entry]
 Name=Teams

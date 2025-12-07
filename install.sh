@@ -274,8 +274,11 @@ run_install_script() {
     
     if [ "$USE_LOCAL_OPTIONS" = true ] && [ -f "$local_script" ]; then
         echo -e "${BLUE}Using local install script for: $(to_display_name "$folder")${NC}"
-        DEBIAN_FRONTEND=noninteractive bash "$local_script"
-        return
+        if ! DEBIAN_FRONTEND=noninteractive bash -e "$local_script"; then
+            echo -e "${RED}Script execution failed for: $(to_display_name "$folder")${NC}"
+            return 1
+        fi
+        return 0
     fi
 
     echo -e "${BLUE}Downloading install script for: $(to_display_name "$folder")${NC}"
@@ -283,15 +286,23 @@ run_install_script() {
     if curl -fsSL "$script_url" -o "$temp_script"; then
         chmod +x "$temp_script"
         echo -e "${GREEN}Running install script for: $(to_display_name "$folder")${NC}"
-        DEBIAN_FRONTEND=noninteractive bash "$temp_script"
+        if ! DEBIAN_FRONTEND=noninteractive bash -e "$temp_script"; then
+            echo -e "${RED}Script execution failed for: $(to_display_name "$folder")${NC}"
+            rm -f "$temp_script"
+            return 1
+        fi
         rm -f "$temp_script"
     elif [ -f "$local_script" ]; then
         echo -e "${YELLOW}Download failed. Falling back to local run.sh for: $(to_display_name "$folder")${NC}"
-        DEBIAN_FRONTEND=noninteractive bash "$local_script"
+        if ! DEBIAN_FRONTEND=noninteractive bash -e "$local_script"; then
+            echo -e "${RED}Script execution failed for: $(to_display_name "$folder")${NC}"
+            return 1
+        fi
     else
         echo -e "${RED}Failed to download run.sh for: $(to_display_name "$folder") and no local copy was found.${NC}"
         return 1
     fi
+    return 0
 }
 
 # Main function
@@ -354,22 +365,46 @@ main() {
         
         # Run install scripts for each selected option
         echo -e "${BLUE}═══ INSTALLING SELECTED PACKAGES ═══${NC}"
-        echo "$selected" | while read -r display_name; do
+
+        # Track failed installations
+        declare -a failed_installs
+
+        while IFS= read -r display_name; do
             folder_name=$(to_folder_name "$display_name")
             echo ""
             echo -e "${YELLOW}────────────────────────────────────────${NC}"
-            run_install_script "$folder_name"
-        done
+            if ! run_install_script "$folder_name"; then
+                echo -e "${RED}✗ Failed: $display_name${NC}"
+                failed_installs+=("$display_name")
+            else
+                echo -e "${GREEN}✓ Completed: $display_name${NC}"
+            fi
+        done <<< "$selected"
         echo ""
         
         # Run post-install apt maintenance
         echo -e "${BLUE}═══ POST-INSTALL MAINTENANCE ═══${NC}"
         run_apt_maintenance
         echo ""
-        
-        echo -e "${GREEN}╔═══════════════════════════════════════════════════════════╗${NC}"
-        echo -e "${GREEN}║          Installation Complete!                           ║${NC}"
-        echo -e "${GREEN}╚═══════════════════════════════════════════════════════════╝${NC}"
+
+        # Show final summary
+        if [ ${#failed_installs[@]} -eq 0 ]; then
+            echo -e "${GREEN}╔═══════════════════════════════════════════════════════════╗${NC}"
+            echo -e "${GREEN}║          Installation Complete!                           ║${NC}"
+            echo -e "${GREEN}║          All packages installed successfully!             ║${NC}"
+            echo -e "${GREEN}╚═══════════════════════════════════════════════════════════╝${NC}"
+        else
+            echo -e "${YELLOW}╔═══════════════════════════════════════════════════════════╗${NC}"
+            echo -e "${YELLOW}║          Installation Complete with Errors                ║${NC}"
+            echo -e "${YELLOW}╚═══════════════════════════════════════════════════════════╝${NC}"
+            echo ""
+            echo -e "${RED}The following installations FAILED:${NC}"
+            for failed_item in "${failed_installs[@]}"; do
+                echo -e "  ${RED}✗${NC} $failed_item"
+            done
+            echo ""
+            echo -e "${YELLOW}Please review the errors above and try running those options individually.${NC}"
+        fi
     else
         echo -e "${YELLOW}Installation cancelled.${NC}"
         exit 0

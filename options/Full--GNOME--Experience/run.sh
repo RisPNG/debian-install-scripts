@@ -7,6 +7,9 @@ sudo apt install flatpak gnome-software-plugin-flatpak -y
 flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 flatpak install flathub com.usebottles.bottles org.gnome.meld it.mijorus.gearlever io.github.flattool.Warehouse com.raggesilver.BlackBox -y
 
+# Set SCRIPT_DIR to the repository root
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && cd ../.. && pwd)"
+
 mkdir -p ~/.config/vivaldi/Default
 if [ -f "$SCRIPT_DIR/.config/vivaldi/Default/Preferences" ]; then
     cp "$SCRIPT_DIR/.config/vivaldi/Default/Preferences" \
