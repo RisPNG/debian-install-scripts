@@ -25,11 +25,27 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 export DEBIAN_FRONTEND="${DEBIAN_FRONTEND:-noninteractive}"
 
+# APT/DPKG options to suppress all interactive prompts
+APT_OPTIONS="-y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold -o Dpkg::Options::=--force-confnew"
+export APT_OPTIONS
+
 is_truthy() {
     case "${1,,}" in
         1|true|yes|on) return 0 ;;
         *) return 1 ;;
     esac
+}
+
+# Configure debconf to be fully non-interactive
+configure_noninteractive_mode() {
+    # Set debconf to noninteractive mode
+    echo 'debconf debconf/frontend select Noninteractive' | sudo debconf-set-selections
+    echo 'debconf debconf/priority select critical' | sudo debconf-set-selections
+
+    # Also configure via environment
+    export DEBIAN_FRONTEND=noninteractive
+    export DEBIAN_PRIORITY=critical
+    export APT_LISTCHANGES_FRONTEND=none
 }
 
 # Check if gum is installed
@@ -40,7 +56,7 @@ check_gum() {
         sudo mkdir -p /etc/apt/keyrings
         curl -fsSL https://repo.charm.sh/apt/gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/charm.gpg
         echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" | sudo tee /etc/apt/sources.list.d/charm.list
-        sudo apt update && sudo apt install gum -y
+        sudo apt update && sudo DEBIAN_FRONTEND=noninteractive apt install gum $APT_OPTIONS
         echo -e "${GREEN}Gum installed successfully!${NC}"
     fi
 }
@@ -48,7 +64,7 @@ check_gum() {
 # Check for required tools
 check_dependencies() {
     local missing=()
-    
+
     for cmd in curl jq; do
         if ! command -v "$cmd" &> /dev/null; then
             missing+=("$cmd")
@@ -60,10 +76,10 @@ check_dependencies() {
             missing+=("git")
         fi
     fi
-    
+
     if [ ${#missing[@]} -ne 0 ]; then
         echo -e "${YELLOW}Installing missing dependencies: ${missing[*]}${NC}"
-        sudo apt update && sudo apt install -y "${missing[@]}"
+        sudo apt update && sudo DEBIAN_FRONTEND=noninteractive apt install $APT_OPTIONS "${missing[@]}"
     fi
 }
 
@@ -91,12 +107,12 @@ use_local_options_directory() {
 ensure_package_system_ready() {
     echo -e "${BLUE}Checking package manager state...${NC}"
 
-    if ! sudo dpkg --configure -a; then
+    if ! sudo DEBIAN_FRONTEND=noninteractive dpkg --configure -a; then
         echo -e "${RED}dpkg --configure -a failed. Please resolve package manager issues and re-run the installer.${NC}"
         exit 1
     fi
 
-    if ! sudo apt-get -f install -y; then
+    if ! sudo DEBIAN_FRONTEND=noninteractive apt-get -f install $APT_OPTIONS; then
         echo -e "${RED}Failed to repair packages with 'apt-get -f install'. Resolve package issues and retry.${NC}"
         exit 1
     fi
@@ -234,34 +250,34 @@ to_folder_name() {
 # Run apt maintenance commands
 run_apt_maintenance() {
     echo -e "${BLUE}Running APT maintenance...${NC}"
-    
+
     ensure_package_system_ready
-    
+
     sudo apt update
-    
+
     # Check if modernize-sources exists (newer apt versions)
     if apt-get --help 2>&1 | grep -q "modernize-sources"; then
-        sudo apt modernize-sources -y
+        sudo DEBIAN_FRONTEND=noninteractive apt modernize-sources $APT_OPTIONS
         sudo apt update
     fi
-    
-    sudo apt upgrade -y
-    sudo apt full-upgrade -y
-    sudo apt dist-upgrade -y
+
+    sudo DEBIAN_FRONTEND=noninteractive apt upgrade $APT_OPTIONS
+    sudo DEBIAN_FRONTEND=noninteractive apt full-upgrade $APT_OPTIONS
+    sudo DEBIAN_FRONTEND=noninteractive apt dist-upgrade $APT_OPTIONS
     sudo apt update
     sudo apt autoclean -y
-    
+
     # Use autopurge if available, otherwise autoremove with purge
     if apt-get --help 2>&1 | grep -q "autopurge"; then
-        sudo apt autopurge -y
+        sudo DEBIAN_FRONTEND=noninteractive apt autopurge $APT_OPTIONS
     else
-        sudo apt autoremove --purge -y
+        sudo DEBIAN_FRONTEND=noninteractive apt autoremove --purge $APT_OPTIONS
     fi
-    
-    sudo apt autoremove -y
+
+    sudo DEBIAN_FRONTEND=noninteractive apt autoremove $APT_OPTIONS
     sudo apt clean -y
     ensure_package_system_ready
-    
+
     echo -e "${GREEN}APT maintenance complete!${NC}"
 }
 
@@ -314,8 +330,11 @@ main() {
     echo "╚═══════════════════════════════════════════════════════════╝"
     echo -e "${NC}"
 
+    # Configure system for fully non-interactive operation
+    configure_noninteractive_mode
+
     trap cleanup_temp_clone EXIT
-    
+
     ensure_package_system_ready
 
     # Check and install dependencies
