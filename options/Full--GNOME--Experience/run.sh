@@ -6,3 +6,23 @@ sudo gpasswd -a "$USER" i2c
 sudo apt install flatpak gnome-software-plugin-flatpak -y
 flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 flatpak install flathub com.usebottles.bottles org.gnome.meld it.mijorus.gearlever io.github.flattool.Warehouse com.raggesilver.BlackBox -y
+
+mkdir -p ~/.config/vivaldi/Default
+if [ -f "$SCRIPT_DIR/.config/vivaldi/Default/Preferences" ]; then
+    cp "$SCRIPT_DIR/.config/vivaldi/Default/Preferences" \
+       ~/.config/vivaldi/Default/Preferences
+fi
+
+if [ -f "$SCRIPT_DIR/.mozilla/firefox/defaultprofile/prefs.js" ]; then
+    for profile in ~/.mozilla/firefox/*.default; do
+        if [ -d "$profile" ]; then
+            cp "$SCRIPT_DIR/.mozilla/firefox/defaultprofile/prefs.js" "$profile/prefs.js"
+        fi
+    done
+
+    for profile in ~/.mozilla/firefox/*.default-esr; do
+        if [ -d "$profile" ]; then
+            cp "$SCRIPT_DIR/.mozilla/firefox/defaultprofile/prefs.js" "$profile/prefs.js"
+        fi
+    done
+fi
