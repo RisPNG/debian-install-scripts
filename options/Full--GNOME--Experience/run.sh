@@ -1,3 +1,12 @@
+TANGERINE_LIST="/etc/apt/sources.list.d/home:tangerine:deb12-xfce4.18.list"
+TANGERINE_KEY="/etc/apt/trusted.gpg.d/home_tangerine_deb12-xfce4.18.gpg"
+
+# Ensure we stay on Debian repos for this bulk install
+if [ -f "$TANGERINE_LIST" ] || [ -f "$TANGERINE_KEY" ]; then
+    sudo rm -f "$TANGERINE_LIST" "$TANGERINE_KEY"
+fi
+sudo apt update
+
 sudo apt install git wget gnome-shell-extension-apps-menu gnome-boxes gnome-snapshot gnome-characters gnome-clocks ptyxis gnome-disk-utility baobab gnome-shell-extension-manager gnome-shell-extension-prefs fastfetch file-roller font-manager gnome-tweaks libreoffice gnome-logs seahorse remmina gnome-connections gnome-sound-recorder gnome-system-monitor gnome-text-editor qbittorrent wine evince epiphany-browser nomacs-l10n diodon yt-dlp mpv libmpv-dev aptitude mc ncdu ddcutil ddccontrol gddccontrol ddccontrol-db i2c-tools curl ca-certificates qalculate-gtk fuse libfuse-dev gir1.2-gnomedesktop-3.0 python3-dbus python3-gi gir1.2-glib-2.0 dbus python3-full xclip devilspie2 ffmpeg ripgrep -y
 wget -O ~/Downloads/actions-for-nautilus_2.0.0~pre2-1_all.deb https://github.com/bassmanitram/actions-for-nautilus/raw/refs/heads/v2/dist/actions-for-nautilus_2.0.0~pre2-1_all.deb && sudo apt install ~/Downloads/actions-for-nautilus_2.0.0~pre2-1_all.deb -y
 sudo modprobe i2c-dev

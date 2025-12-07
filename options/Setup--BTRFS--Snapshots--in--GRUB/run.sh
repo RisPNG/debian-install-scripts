@@ -1,8 +1,10 @@
 sudo apt install timeshift git -y
 cd ~/Documents
-mkdir Git
+mkdir -p Git
 cd Git
-git clone https://github.com/Antynea/grub-btrfs.git
+if [ ! -d grub-btrfs ]; then
+    git clone https://github.com/Antynea/grub-btrfs.git
+fi
 cd grub-btrfs
 sudo make install
 sudo systemctl start grub-btrfsd

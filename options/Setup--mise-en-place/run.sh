@@ -3,7 +3,9 @@ wget -O ~/Downloads/libssl1_1.deb http://security.debian.org/debian-security/poo
 wget -O ~/Downloads/wkhtmltopdf.deb https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6.1-2/wkhtmltox_0.12.6.1-2.bullseye_amd64.deb && sudo apt install ~/Downloads/wkhtmltopdf.deb -y
 
 curl https://mise.run | sh
-echo "eval \"\$(/home/$USER/.local/bin/mise activate bash)\"" >> ~/.bashrc
+if ! grep -q 'mise activate' ~/.bashrc; then
+    echo "eval \"\$(/home/$USER/.local/bin/mise activate bash)\"" >> ~/.bashrc
+fi
 source ~/.bashrc
 git config --global credential.helper store
 mise use --global python@3.10
