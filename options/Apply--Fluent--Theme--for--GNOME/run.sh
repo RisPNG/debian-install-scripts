@@ -1,6 +1,8 @@
 # Pre-install sassc to avoid interactive prompts
 sudo apt-get install -y sassc libsass1
 
+# Ensure workspace exists for cloning themes
+mkdir -p ~/Documents/Git
 cd ~/Documents/Git
 
 # Clone or update Fluent-icon-theme
