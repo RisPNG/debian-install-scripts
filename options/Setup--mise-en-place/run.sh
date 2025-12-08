@@ -4,9 +4,12 @@ wget "$download_url" -O ~/Downloads/wkhtmltopdf.deb
 sudo apt install ~/Downloads/wkhtmltopdf.deb -y
 
 curl https://mise.run | sh
-if ! grep -q 'mise activate' ~/.bashrc; then
-    echo "eval \"\$(/home/$USER/.local/bin/mise activate bash)\"" >> ~/.bashrc
+LINE='eval "$(/home/$USER/.local/bin/mise activate bash)"'
+
+if ! grep -Fxq "$LINE" ~/.bashrc; then
+  echo "$LINE" >> ~/.bashrc
 fi
+
 source ~/.bashrc
 git config --global credential.helper store
 mise use --global python@3.10
