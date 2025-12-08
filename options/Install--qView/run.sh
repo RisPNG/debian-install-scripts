@@ -1,0 +1,1 @@
+wget $(curl -s https://api.github.com/repos/jurplel/qView/releases/latest | jq -r '.assets[] | select(.name | endswith("x86_64.AppImage")) | .browser_download_url') -O ~/Downloads/qView-x86_64.AppImage && flatpak run it.mijorus.gearlever --integrate ~/Downloads/qView-x86_64.AppImage -y
