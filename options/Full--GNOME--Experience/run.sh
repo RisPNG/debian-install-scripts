@@ -29,3 +29,78 @@ if [ -f "$SCRIPT_DIR/.mozilla/firefox/defaultprofile/prefs.js" ]; then
         fi
     done
 fi
+
+if ! grep -q 'fastfetch' ~/.bashrc; then
+  cat >> ~/.bashrc <<'EOF'
+tch() { mkdir -p "$(dirname "$1")" && touch "$1" ; }
+
+export EDITOR=mcedit
+export VISUAL=mcedit
+
+# Run fastfetch on shell initialization
+fastfetch
+
+export PATH=$HOME/.local/bin:$PATH
+
+# Always refer python3 and pip3 to system packages instead of version controlled tool(s)
+export PATH="/usr/bin:/usr/local/bin:$PATH"
+alias python3='/usr/bin/python3'
+alias pip3='/usr/bin/pip3'
+EOF
+fi
+
+sudo tee $HOME/.local/share/actions-for-nautilus/config.json >/dev/null <<'EOF'
+{
+    "actions": [
+        {
+            "type": "menu",
+            "label": "Copy details",
+            "actions": [
+                {
+                    "type": "command",
+                    "label": "Copy name",
+                    "command_line": "echo -n %B | xclip -f -selection primary | xclip -selection clipboard",
+                    "use_shell": true
+                },
+                {
+                    "type": "command",
+                    "label": "Copy path",
+                    "command_line": "echo -n %F | xclip -f -selection primary | xclip -selection clipboard",
+                    "use_shell": true
+                },
+                {
+                    "type": "command",
+                    "label": "Copy URI",
+                    "command_line": "echo -n %U | xclip -f -selection primary | xclip -selection clipboard",
+                    "use_shell": true
+                }
+            ]
+        },
+        {
+            "type": "command",
+            "label": "Open in Code",
+            "command_line": "bash -cli \"code .\"",
+            "cwd": "%f",
+            "use_shell": true,
+            "min_items": 1,
+            "max_items": 1,
+            "filetypes": [
+                "directory"
+            ]
+        },
+        {
+            "type": "command",
+            "label": "Execute command here",
+            "command_line": "bash -cli 'cmd=$(zenity --entry --text \"Enter command\" --title \"execute command in %f\" --width 800); if [ -n \"$cmd\" ]; then flatpak run com.raggesilver.BlackBox --working-directory=\"%f\" --command=\"bash -cli \\\"clear && cd %f && $cmd; echo; read -rp Press\\ Enter\\ to\\ close...\\\"\"; fi'",
+            "cwd": "%f",
+            "use_shell": true,
+            "min_items": 1,
+            "max_items": 1,
+            "filetypes": [
+                "directory"
+            ]
+        }
+    ],
+    "debug": false
+}
+EOF
