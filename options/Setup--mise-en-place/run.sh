@@ -8,7 +8,7 @@ if ! grep -q 'mise activate' ~/.bashrc; then
     echo "eval \"\$(/home/$USER/.local/bin/mise activate bash)\"" >> ~/.bashrc
 fi
 
-eval \"\$(/home/$USER/.local/bin/mise activate bash)\"
+eval "$(/home/$USER/.local/bin/mise activate bash)"
 source ~/.bashrc
 git config --global credential.helper store
 mise use --global python@3.10
