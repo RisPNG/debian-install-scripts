@@ -1,11 +1,18 @@
-sudo apt install git wget gnome-shell-extension-apps-menu gnome-boxes gnome-snapshot gnome-characters gnome-clocks ptyxis gnome-disk-utility baobab gnome-shell-extension-manager gnome-shell-extension-prefs fastfetch file-roller font-manager gnome-tweaks libreoffice gnome-logs seahorse remmina gnome-connections gnome-sound-recorder gnome-system-monitor gnome-text-editor qbittorrent wine evince epiphany-browser nomacs-l10n diodon yt-dlp mpv libmpv-dev aptitude mc ncdu ddcutil ddccontrol gddccontrol ddccontrol-db i2c-tools curl ca-certificates qalculate-gtk fuse libfuse-dev gir1.2-gnomedesktop-3.0 python3-dbus python3-gi gir1.2-glib-2.0 dbus python3-full xclip devilspie2 ffmpeg ripgrep libsdl2-dev -y
+sudo apt install gir1.2-gnomedesktop-3.0 gir1.2-gnomedesktop-4.0 libgnome-menu-3-dev gnome-shell-extension-apps-menu gnome-shell-extension-arc-menu git wget gnome-shell-extension-apps-menu gnome-disk-utility fastfetch font-manager gnome-tweaks gnome-system-monitor wine yt-dlp libmpv-dev aptitude mc ncdu ddcutil ddccontrol gddccontrol ddccontrol-db i2c-tools curl ca-certificates fuse libfuse-dev gir1.2-gnomedesktop-3.0 python3-dbus python3-gi gir1.2-glib-2.0 dbus python3-full xclip wl-clipboard devilspie2 ffmpeg ripgrep libsdl2-dev -y
 wget -O ~/Downloads/actions-for-nautilus_2.0.0~pre2-1_all.deb https://github.com/bassmanitram/actions-for-nautilus/raw/refs/heads/v2/dist/actions-for-nautilus_2.0.0~pre2-1_all.deb && sudo apt install ~/Downloads/actions-for-nautilus_2.0.0~pre2-1_all.deb -y
 sudo modprobe i2c-dev
 sudo gpasswd -a "$USER" i2c
 
 sudo apt install flatpak gnome-software-plugin-flatpak -y
 flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-flatpak install flathub com.usebottles.bottles org.gnome.meld it.mijorus.gearlever io.github.flattool.Warehouse com.raggesilver.BlackBox -y
+flatpak install flathub com.usebottles.bottles org.gnome.meld it.mijorus.gearlever io.github.flattool.Warehouse com.raggesilver.BlackBox org.gnome.Boxes org.gnome.Snapshot org.gnome.Characters org.gnome.clocks app.devsuite.Ptyxis org.gnome.baobab org.gnome.Extensions com.mattjakeman.ExtensionManager org.gnome.FileRoller org.libreoffice.LibreOffice org.gnome.Logs org.gnome.seahorse.Application org.remmina.Remmina org.gnome.Connections org.gnome.SoundRecorder org.gnome.TextEditor org.gnome.Epiphany org.nickvision.tubeconverter org.qbittorrent.qBittorrent org.gnome.Evince org.nomacs.ImageLounge io.mpv.Mpv io.github.Qalculate -y
+
+# Get the latest Clyp download URL
+download_url=$(curl -fsSL https://api.github.com/repos/murat-cileli/clyp/releases/latest | jq -r '.assets[] | select(.name | endswith(".deb")) | .browser_download_url')
+
+# Download and install
+wget "$download_url" -O ~/Downloads/clyp-latest.deb
+sudo apt install ~/Downloads/clyp-latest.deb -y
 
 # Set SCRIPT_DIR to the repository root
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && cd ../.. && pwd)"
