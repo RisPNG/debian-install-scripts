@@ -1,5 +1,12 @@
 sudo apt install gir1.2-gnomedesktop-3.0 gir1.2-gnomedesktop-4.0 libgnome-menu-3-dev gnome-shell-extension-apps-menu gnome-shell-extension-arc-menu git wget gnome-shell-extension-apps-menu gnome-disk-utility fastfetch font-manager gnome-tweaks gnome-system-monitor wine yt-dlp libmpv-dev aptitude mc ncdu ddcutil ddccontrol gddccontrol ddccontrol-db i2c-tools curl ca-certificates fuse libfuse-dev gir1.2-gnomedesktop-3.0 python3-dbus python3-gi gir1.2-glib-2.0 dbus python3-full xclip wl-clipboard devilspie2 ffmpeg ripgrep libsdl2-dev -y
-wget -O ~/Downloads/actions-for-nautilus_2.0.0~pre2-1_all.deb https://github.com/bassmanitram/actions-for-nautilus/raw/refs/heads/v2/dist/actions-for-nautilus_2.0.0~pre2-1_all.deb && sudo apt install ~/Downloads/actions-for-nautilus_2.0.0~pre2-1_all.deb -y
+
+# Get the latest LocalSend download URL
+download_url=$(curl -fsSL https://api.github.com/repos/bassmanitram/actions-for-nautilus/releases/latest | jq -r '.assets[] | select(.name | endswith(".deb")) | .browser_download_url')
+
+# Download and install
+wget "$download_url" -O ~/Downloads/actions-for-nautilus-latest.deb
+sudo apt install ~/Downloads/actions-for-nautilus-latest.deb -y
+
 sudo modprobe i2c-dev
 sudo gpasswd -a "$USER" i2c
 
