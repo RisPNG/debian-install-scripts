@@ -92,6 +92,17 @@ sudo tee $HOME/.local/share/actions-for-nautilus/config.json >/dev/null <<'EOF'
         },
         {
             "type": "command",
+            "label": "Open in Terminal",
+            "command_line": "gapplication action org.gnome.Ptyxis new-tab \"%f\"",
+            "use_shell": true,
+            "min_items": 1,
+            "max_items": 1,
+            "filetypes": [
+                "directory"
+            ]
+        },
+        {
+            "type": "command",
             "label": "Open in Code",
             "command_line": "bash -lic \"code .\"",
             "cwd": "%f",
