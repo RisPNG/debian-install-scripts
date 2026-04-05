@@ -93,7 +93,7 @@ sudo tee $HOME/.local/share/actions-for-nautilus/config.json >/dev/null <<'EOF'
         {
             "type": "command",
             "label": "Open in Code",
-            "command_line": "bash -cli \"code .\"",
+            "command_line": "bash -lic \"code .\"",
             "cwd": "%f",
             "use_shell": true,
             "min_items": 1,
@@ -105,7 +105,7 @@ sudo tee $HOME/.local/share/actions-for-nautilus/config.json >/dev/null <<'EOF'
         {
             "type": "command",
             "label": "Execute command here",
-            "command_line": "bash -cli 'cmd=$(zenity --entry --text \"Enter command\" --title \"execute command in %f\" --width 800); if [ -n \"$cmd\" ]; then flatpak run com.raggesilver.BlackBox --working-directory=\"%f\" --command=\"bash -cli \\\"clear && cd %f && $cmd; echo; read -rp Press\\ Enter\\ to\\ close...\\\"\"; fi'",
+            "command_line": "bash -lic 'cmd=$(zenity --entry --text \"Enter command\" --title \"execute command in %f\" --width 800); if [ -n \"$cmd\" ]; then flatpak run com.raggesilver.BlackBox --working-directory=\"%f\" --command=\"bash -cli \\\"clear && cd %f && $cmd; echo; read -rp Press\\ Enter\\ to\\ close...\\\"\"; fi'",
             "cwd": "%f",
             "use_shell": true,
             "min_items": 1,
