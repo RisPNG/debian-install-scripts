@@ -71,20 +71,20 @@ sudo tee $HOME/.local/share/actions-for-nautilus/config.json >/dev/null <<'EOF'
             "label": "Copy details",
             "actions": [
                 {
-                    "type": "command",
                     "label": "Copy name",
+                    "type": "command",
                     "command_line": "echo -n %B | xclip -f -selection primary | xclip -selection clipboard",
                     "use_shell": true
                 },
                 {
-                    "type": "command",
                     "label": "Copy path",
+                    "type": "command",
                     "command_line": "echo -n %F | xclip -f -selection primary | xclip -selection clipboard",
                     "use_shell": true
                 },
                 {
-                    "type": "command",
                     "label": "Copy URI",
+                    "type": "command",
                     "command_line": "echo -n %U | xclip -f -selection primary | xclip -selection clipboard",
                     "use_shell": true
                 }
@@ -93,21 +93,9 @@ sudo tee $HOME/.local/share/actions-for-nautilus/config.json >/dev/null <<'EOF'
         {
             "type": "command",
             "label": "Open in Terminal",
-            "command_line": "gapplication action org.gnome.Ptyxis new-tab \"%f\"",
             "use_shell": true,
-            "min_items": 1,
-            "max_items": 1,
-            "filetypes": [
-                "directory"
-            ]
-        },
-        {
-            "type": "command",
-            "label": "Open in Code",
-            "command_line": "bash -lic \"code .\"",
+            "command_line": "ptyxis --tab -- bash -lic 'cd \"%f\" && clear && exec bash'",
             "cwd": "%f",
-            "use_shell": true,
-            "min_items": 1,
             "max_items": 1,
             "filetypes": [
                 "directory"
@@ -116,16 +104,27 @@ sudo tee $HOME/.local/share/actions-for-nautilus/config.json >/dev/null <<'EOF'
         {
             "type": "command",
             "label": "Execute command here",
+            "use_shell": true,
             "command_line": "bash -lic 'cmd=$(zenity --entry --text \"Enter command\" --title \"execute command in %f\" --width 800); if [ -n \"$cmd\" ]; then flatpak run com.raggesilver.BlackBox --working-directory=\"%f\" --command=\"bash -cli \\\"clear && cd %f && $cmd; echo; read -rp Press\\ Enter\\ to\\ close...\\\"\"; fi'",
             "cwd": "%f",
+            "max_items": 1,
+            "filetypes": [
+                "directory"
+            ]
+        },
+        {
+            "type": "command",
+            "label": "Open in Code",
             "use_shell": true,
-            "min_items": 1,
+            "command_line": "bash -lic \"code .\"",
+            "cwd": "%f",
             "max_items": 1,
             "filetypes": [
                 "directory"
             ]
         }
     ],
+    "sort": "manual",
     "debug": false
 }
 EOF
